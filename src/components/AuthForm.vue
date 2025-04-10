@@ -8,6 +8,10 @@
 
       <h2 class="form-title">{{ isRegistering ? 'Регистрация' : 'Авторизация' }}</h2>
 
+      <div v-if="errorMessage" class="global-error">
+        {{ errorMessage }}
+      </div>
+
       <form @submit.prevent="handleSubmit" class="auth-form">
         <div class="form-group">
           <InputText
@@ -56,32 +60,42 @@
 
           <Button 
             type="submit" 
-            :label="isRegistering ? 'Зарегистрироваться' : 'Войти'" 
             class="submit-btn"
-            :disabled="isRegistering && (invalidPassword || passwordMismatch || invalidEmail)"
-          />
+            :disabled="isRegistering && (invalidPassword || passwordMismatch || invalidEmail) || isLoading"
+          >
+            <span v-if="!isLoading">
+              {{ isRegistering ? 'Зарегистрироваться' : 'Войти' }}
+            </span>
+            <i v-else class="pi pi-spinner pi-spin"></i>
+          </Button>
 
           <div class="auth-actions">
-	<Button 
-        class="vk-auth-btn"
-        @click="handleVKAuth"
-      >
-        <div class="vk-btn-content">
-          <img 
-            src="@/assets/VkLogo.png" 
-            alt="VK Logo" 
-            class="vk-logo" 
-          />
-          <span>Авторизация через ВК</span>
-        </div>
-     	 </Button>
+            <Button 
+              class="vk-auth-btn"
+              @click="handleVKAuth"
+            >
+              <div class="vk-btn-content">
+                <img 
+                  src="@/assets/VkLogo.png" 
+                  alt="VK Logo" 
+                  class="vk-logo" 
+                />
+                <span>Авторизация через ВК</span>
+              </div>
+            </Button>
             <button 
               class="switch-mode" 
               @click="isRegistering = !isRegistering"
+              :disabled="isLoading"
             >
               {{ isRegistering ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать' }}
             </button>
-            <a href="/" class="return-link">Вернуться на главную</a>
+             <button 
+    class="return-link"
+    @click="$router.push('/dashboard')"
+  >
+    Вернуться на главную
+  </button>
           </div>
         </div>
       </form>
@@ -91,9 +105,14 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 
+const router = useRouter();
+
+// Состояния формы
 const isRegistering = ref(false);
 const currentEmail = ref('');
 const currentPassword = ref('');
@@ -105,7 +124,11 @@ const emailTouched = ref(false);
 const passwordTouched = ref(false);
 const confirmTouched = ref(false);
 
-// Валидация пароля
+// Состояния загрузки и ошибок
+const isLoading = ref(false);
+const errorMessage = ref('');
+
+// Валидации
 const invalidPassword = computed(() => {
   const password = currentPassword.value;
   return isRegistering.value && (
@@ -114,7 +137,6 @@ const invalidPassword = computed(() => {
   );
 });
 
-// Валидация email
 const invalidEmail = computed(() => {
   return isRegistering.value && 
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerEmail.value);
@@ -125,20 +147,56 @@ const passwordMismatch = computed(() =>
   currentPassword.value !== registerConfirmPassword.value
 );
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (isRegistering.value && (invalidPassword.value || passwordMismatch.value || invalidEmail.value)) return;
   
-  console.log({
-    [isRegistering.value ? 'registerData' : 'loginData']: {
-      login: currentEmail.value,
-      ...(isRegistering.value && { email: registerEmail.value }),
-      password: currentPassword.value
+  try {
+    isLoading.value = true;
+    errorMessage.value = '';
+
+    const requestData = isRegistering.value 
+      ? {
+          login: currentEmail.value,
+          email: registerEmail.value,
+          password: currentPassword.value
+        }
+      : {
+          loginOrEmail: currentEmail.value,
+          password: currentPassword.value
+        };
+
+    const endpoint = isRegistering.value ? '/register' : '/login';
+    const { data } = await axios.post(`http://your-api-url${endpoint}`, requestData);
+
+    if (data.token) {
+      localStorage.setItem('authToken', data.token);
+      router.push('/dashboard');
     }
-  });
+    
+  } catch (error) {
+    handleApiError(error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-const handleVKAuth = () => {
-  // Логика авторизации через ВК
+const handleApiError = (error) => {
+  if (error.response) {
+    errorMessage.value = error.response.data?.message || 
+      (isRegistering.value 
+        ? 'Ошибка регистрации' 
+        : 'Неверный логин или пароль');
+  } else {
+    errorMessage.value = 'Ошибка соединения с сервером';
+  }
+};
+
+const handleVKAuth = async () => {
+  try {
+    window.location.href = 'http://your-api-url/auth/vk';
+  } catch (error) {
+    errorMessage.value = 'Ошибка авторизации через ВК';
+  }
 };
 </script>
 
@@ -193,6 +251,19 @@ const handleVKAuth = () => {
   margin-top: 1rem;
   background: #3b82f6;
   border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.global-error {
+  color: #ef4444;
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  border: 1px solid #ef4444;
+  border-radius: 4px;
+  background: #fee2e2;
 }
 
 .auth-actions {
@@ -205,7 +276,7 @@ const handleVKAuth = () => {
   background: none;
   border: none;
   cursor: pointer;
-  margin-bottom: 1.5rem;
+  margin: 1.5rem 0;
   display: block;
   width: 100%;
 }
@@ -214,31 +285,6 @@ const handleVKAuth = () => {
   width: 100%;
   background: #0077ff !important;
   margin-bottom: 1rem;
-}
-
-.return-link {
-  color: #64748b;
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-
-.input-error {
-  border-color: #ef4444 !important;
-}
-
-.error-message {
-  color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: -0.5rem;
-  margin-bottom: 1rem;
-  display: block;
-}
-
-.vk-auth-btn {
-  width: 100%;
-  background: #0077ff !important;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
 }
 
 .vk-btn-content {
@@ -253,5 +299,51 @@ const handleVKAuth = () => {
   width: 20px;
   height: 20px;
   object-fit: contain;
+}
+
+.return-link {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: block;
+  margin-top: 1rem;
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.pi-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.return-link {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 8px 16px;
+  color: black;
+  text-decoration: none;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.return-link:hover {
+  background: #3b82f6;
+  color: white;
 }
 </style>

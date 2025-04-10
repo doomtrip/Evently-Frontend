@@ -1,10 +1,10 @@
 <template>
 
-  <AuthForm />
+  <AuthView />
 
 </template>
 
 <script setup>
-import AuthForm from './components/AuthForm.vue'
+import AuthView from './views/AuthView.vue'
 </script>
 
