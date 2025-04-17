@@ -1,61 +1,61 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import AuthService from '@/api/Auth';
+import { createRouter, createWebHistory } from 'vue-router'
+import AuthForm from '@/components/AuthForm.vue'
+import AdminPanel from '@/components/admin/AdminPanel.vue'
 
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { requiresAuth: false }
+    redirect: '/admin'
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/AuthView.vue'),
-    meta: { requiresAuth: false, hideForAuth: true }
+    path: '/admin',
+    component: AdminPanel,
+    children: [
+      {
+        path: 'create-event',
+        name: 'CreateEvent',
+        component: () => import('@/components/admin/CreateEvent.vue')
+      },
+      {
+        path: 'events',
+        name: 'EventsList',
+        component: () => import('@/components/admin/EventsList.vue')
+      },
+      {
+        path: 'permissions',
+        name: 'Permissions',
+        component: () => import('@/components/admin/PermissionsManager.vue')
+      },
+      {
+        path: 'users',
+        name: 'UsersList',
+        component: () => import('@/components/admin/UsersList.vue')
+      },
+
+    ]
   },
   {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/AuthView.vue'),
-    meta: { requiresAuth: false, hideForAuth: true }
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('@/views/DashboardView.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/ProfileView.vue'),
-    meta: { requiresAuth: true }
+    path: '/auth',
+    name: 'Auth',
+    component: AuthForm
   },
   {
     path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/NotFound.vue')
+    redirect: '/admin'
   }
-];
+]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes
-});
-
-router.beforeEach((to, from, next) => {
-  // Удалить проверку для '/dashboard' 
-  if (to.path !== '/dashboard' && to.meta.requiresAuth) {
-    // Остальная логика
+  history: createWebHistory(),
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
   }
-  next();
-});
+})
 
-// Обработка ошибок навигации
-router.onError((error) => {
-  console.error('Router error:', error);
-  router.push({ name: 'NotFound' });
-});
+// Временный байпас проверки авторизации
+router.beforeEach((to, from, next) => {
+  next()
+})
 
-export default router;
+export default router
