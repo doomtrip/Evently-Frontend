@@ -20,7 +20,7 @@
         <router-link to="/admin/events">Список событий</router-link>
         <router-link to="/admin/permissions">Управление правами</router-link>
         <router-link to="/admin/users">Список пользователей</router-link>
-        <router-link to="/auth" class="login-btn">Войти</router-link>
+        <UserMenu />
       </nav>
     </header>
 
@@ -93,9 +93,13 @@
 
 <script>
 import basedImage from '@/assets/based_image.jpg';
+import UserMenu from '@/components/UserMenu.vue';
 
 export default {
   name: 'AdminPanel',
+  components: {
+    UserMenu
+  },
   data() {
     return {
       basedImage: basedImage,
@@ -109,7 +113,7 @@ export default {
         { value: 'visited', label: 'Посещенные' }
       ],
       upcomingEvents: [
-          {
+        {
           id: 1,
           title: 'IT-Митап 2024',
           type: 'Митап',
@@ -230,17 +234,15 @@ header {
 
 .logo-link {
   display: block;
-  background: none; /* Убрали фон */
 }
 
 .logo {
   height: 40px;
-  background: none; /* Убрали фон */
 }
 
 nav {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
   align-items: center;
 }
 
@@ -256,16 +258,25 @@ nav a:hover {
   background: #e9ecef;
 }
 
-.login-btn {
-  background: #007bff;
-  color: white !important;
-}
-
 .search-container input {
   padding: 0.5rem 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   width: 400px;
+}
+
+/* Стили для аватарки */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+  transition: transform 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.1);
 }
 
 .upcoming-events {

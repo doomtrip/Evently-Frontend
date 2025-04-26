@@ -12,6 +12,8 @@
         {{ errorMessage }}
       </div>
 
+
+
       <form @submit.prevent="handleSubmit" class="auth-form">
         <div class="form-group">
           <InputText
@@ -90,12 +92,12 @@
             >
               {{ isRegistering ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Создать' }}
             </button>
-             <button 
-    class="return-link"
-    @click="$router.push('/dashboard')"
-  >
-    Вернуться на главную
-  </button>
+            <button 
+              class="return-link"
+              @click="$router.push('/')"
+            >
+              Вернуться на главную
+            </button>
           </div>
         </div>
       </form>
@@ -103,14 +105,17 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { useStore } from 'vuex';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import userImg from '@/assets/user.png';
 
 const router = useRouter();
+const store = useStore();
 
 // Состояния формы
 const isRegistering = ref(false);
@@ -118,6 +123,12 @@ const currentEmail = ref('');
 const currentPassword = ref('');
 const registerEmail = ref('');
 const registerConfirmPassword = ref('');
+
+// Тестовые данные
+const testCredentials = {
+  admin: { login: 'admin', password: 'admin' },
+  user: { login: 'user', password: 'user' }
+};
 
 // Трекеры взаимодействия
 const emailTouched = ref(false);
@@ -147,6 +158,13 @@ const passwordMismatch = computed(() =>
   currentPassword.value !== registerConfirmPassword.value
 );
 
+// Заполнение тестовых данных
+const fillTestCredentials = (type) => {
+  currentEmail.value = testCredentials[type].login;
+  currentPassword.value = testCredentials[type].password;
+};
+
+// Обработчик формы
 const handleSubmit = async () => {
   if (isRegistering.value && (invalidPassword.value || passwordMismatch.value || invalidEmail.value)) return;
   
@@ -154,49 +172,70 @@ const handleSubmit = async () => {
     isLoading.value = true;
     errorMessage.value = '';
 
-    const requestData = isRegistering.value 
-      ? {
-          login: currentEmail.value,
-          email: registerEmail.value,
-          password: currentPassword.value
+    if (isRegistering.value) {
+      // Логика регистрации
+      const newUser = {
+        login: currentEmail.value,
+        email: registerEmail.value,
+        password: currentPassword.value,
+        role: 'user',
+        avatar: userImg
+      };
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('users', JSON.stringify([
+        ...JSON.parse(localStorage.getItem('users') || '[]'),
+        newUser
+      ]));
+      
+      // Автоматическая авторизация
+      store.commit('setUser', newUser);
+      router.push('/');
+    } else {
+      // Логика авторизации
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find(u => 
+        (u.login === currentEmail.value || u.email === currentEmail.value) &&
+        u.password === currentPassword.value
+      );
+
+      if (!user) {
+        // Проверка тестовых аккаунтов
+        if (currentEmail.value === testCredentials.admin.login && 
+            currentPassword.value === testCredentials.admin.password) {
+          store.commit('setUser', {
+            ...testCredentials.admin,
+            role: 'admin',
+            avatar: userImg
+          });
+          return router.push('/admin');
         }
-      : {
-          loginOrEmail: currentEmail.value,
-          password: currentPassword.value
-        };
+        
+        if (currentEmail.value === testCredentials.user.login && 
+            currentPassword.value === testCredentials.user.password) {
+          store.commit('setUser', {
+            ...testCredentials.user,
+            role: 'user',
+            avatar: userImg
+          });
+          return router.push('/');
+        }
+        
+        throw new Error('Неверные учетные данные');
+      }
 
-    const endpoint = isRegistering.value ? '/register' : '/login';
-    const { data } = await axios.post(`http://your-api-url${endpoint}`, requestData);
-
-    if (data.token) {
-      localStorage.setItem('authToken', data.token);
-      router.push('/dashboard');
+      store.commit('setUser', user);
+      router.push(user.role === 'admin' ? '/admin' : '/');
     }
-    
   } catch (error) {
-    handleApiError(error);
+    errorMessage.value = error.message;
   } finally {
     isLoading.value = false;
   }
 };
 
-const handleApiError = (error) => {
-  if (error.response) {
-    errorMessage.value = error.response.data?.message || 
-      (isRegistering.value 
-        ? 'Ошибка регистрации' 
-        : 'Неверный логин или пароль');
-  } else {
-    errorMessage.value = 'Ошибка соединения с сервером';
-  }
-};
-
 const handleVKAuth = async () => {
-  try {
-    window.location.href = 'http://your-api-url/auth/vk';
-  } catch (error) {
-    errorMessage.value = 'Ошибка авторизации через ВК';
-  }
+  errorMessage.value = 'Авторизация через ВК временно недоступна';
 };
 </script>
 
@@ -328,6 +367,35 @@ const handleVKAuth = async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.test-users {
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.test-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.admin-btn {
+  background: #007bff;
+  color: white;
+}
+
+.user-btn {
+  background: #28a745;
+  color: white;
+}
+
+.test-btn:hover {
+  opacity: 0.9;
 }
 
 .return-link {

@@ -6,6 +6,14 @@
   </router-view>
 </template>
 
+<script>
+export default {
+  created() {
+    this.$store.dispatch('initialize')
+  }
+}
+</script>
+
 <style>
 #app {
   font-family: Arial, sans-serif;

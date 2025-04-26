@@ -1,14 +1,25 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import PrimeVue from 'primevue/config'
-import router from './router'
-import store from './store'
-import './assets/main.css'
+// main.js
+import { createApp } from 'vue';
+import App from './App.vue';
+import router from './router';
+import store from './store';
+import PrimeVue from 'primevue/config';
+import 'primevue/resources/themes/saga-blue/theme.css';
+import 'primevue/resources/primevue.min.css';
+import 'primeicons/primeicons.css';
 
-const app = createApp(App)
+// Импорт компонентов PrimeVue
+import Button from 'primevue/button';
+import Menu from 'primevue/menu';
 
-app.use(PrimeVue)
-app.use(router)
-app.use(store)
+const app = createApp(App);
 
-app.mount('#app')
+app.use(router);
+app.use(store);
+app.use(PrimeVue);
+
+// Глобальная регистрация компонентов
+app.component('Button', Button);
+app.component('Menu', Menu);
+
+app.mount('#app');
