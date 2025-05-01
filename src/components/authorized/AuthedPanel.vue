@@ -1,5 +1,5 @@
 <template>
-  <div class="guest-panel">
+  <div class="authed-panel">
     <header class="main-header">
       <div class="header-content">
         <router-link to="/" class="logo-link">
@@ -54,25 +54,18 @@
     </header>
 
     <main class="content">
-      <EventList 
-        :events="filteredEvents"
-        :show-filters="true"
-        :available-filters="guestFilters"
-        @filter-change="handleFilterChange"
-      />
+      <router-view :events="filteredEvents" />
     </main>
   </div>
 </template>
 
 <script>
 import { mapState } from 'vuex'
-import EventList from '@/components/events/EventList.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import { eventsData } from '@/components/events/eventsData'
 
 export default {
   components: {
-    EventList,
     UserMenu
   },
   data() {
@@ -80,11 +73,7 @@ export default {
       searchQuery: '',
       searchResults: [],
       allEvents: eventsData,
-      currentFilter: 'all',
-      guestFilters: [
-        { value: 'all', label: 'Все' },
-        { value: 'past', label: 'Прошедшие' }
-      ]
+      currentFilter: 'all'
     }
   },
   mounted() {
@@ -100,6 +89,9 @@ export default {
       let events = this.searchQuery.length === 0 ? this.allEvents : this.searchResults
       
       switch(this.currentFilter) {
+        case 'my':
+          events = events.filter(event => event.isMine)
+          break
         case 'past':
           events = events.filter(event => {
             const eventDate = new Date(event.date)
@@ -142,12 +134,9 @@ export default {
       this.searchResults = []
     },
     handleClickOutside(event) {
-      if (this.$refs.searchContainer && !this.$refs.searchContainer.contains(event.target)) {
+      if (!this.$refs.searchContainer.contains(event.target)) {
         this.closeDropdown()
       }
-    },
-    handleFilterChange(filter) {
-      this.currentFilter = filter
     }
   }
 }
@@ -251,6 +240,26 @@ export default {
   max-width: 1200px;
   margin: 2rem auto;
   padding: 0 2rem;
+}
+
+.filters {
+  margin: 1rem 0;
+  display: flex;
+  gap: 1rem;
+}
+
+.filters button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #007bff;
+  border-radius: 20px;
+  background: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filters button.active {
+  background: #007bff;
+  color: white;
 }
 
 @media (max-width: 768px) {

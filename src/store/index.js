@@ -36,12 +36,12 @@ export default createStore({
       }
     },
 
-    async login({ commit }, credentials) {
+    async login({ commit, dispatch }, credentials) {
       try {
         const response = await authService.login(credentials)
         const userData = JSON.parse(atob(response.token))
         commit('setUser', userData)
-        return true
+        return '/user' // Возвращаем путь для редиректа
       } catch (error) {
         console.error('Ошибка авторизации:', error)
         throw error

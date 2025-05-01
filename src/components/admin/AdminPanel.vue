@@ -9,12 +9,34 @@
         >
       </router-link>
       <nav>
-        <div class="search-container">
+        <div class="search-container" ref="searchContainer">
           <input 
             type="text" 
             placeholder="Поиск событий..." 
             v-model="searchQuery"
+            @input="handleSearch"
+            @focus="handleSearch"
           >
+          <div 
+            v-if="searchResults.length > 0" 
+            class="search-dropdown"
+            @mouseleave="closeDropdown"
+          >
+            <div
+              v-for="event in searchResults"
+              :key="event.id"
+              class="search-item"
+              @click="navigateToEvent(event.id)"
+              @mousedown.prevent
+            >
+              <div class="search-item-content">
+                <span class="event-title">{{ event.title }}</span>
+                <span class="event-date">
+                  {{ formatEventDate(event.date) }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
         <router-link to="/admin/create-event">Создать событие</router-link>
         <router-link to="/admin/events">Список событий</router-link>
@@ -24,7 +46,6 @@
       </nav>
     </header>
 
-    <!-- Блок ближайших событий -->
     <div v-if="isAdminRoot" class="upcoming-events">
       <div class="events-container">
         <div class="events-header">
@@ -69,13 +90,9 @@
           </div>
         </div>
 
-        <!-- Кнопка "Показать еще" -->
         <div class="load-more" v-if="showLoadMore">
           <button @click="loadMore">
-            <img 
-              src="@/assets/List_frame.png" 
-              alt="Показать еще"
-            >
+            <img src="@/assets/List_frame.png" alt="Показать еще">
           </button>
         </div>
       </div>
@@ -94,12 +111,11 @@
 <script>
 import basedImage from '@/assets/based_image.jpg';
 import UserMenu from '@/components/UserMenu.vue';
+import { eventsData } from '@/components/events/eventsData';
 
 export default {
   name: 'AdminPanel',
-  components: {
-    UserMenu
-  },
+  components: { UserMenu },
   data() {
     return {
       basedImage: basedImage,
@@ -109,62 +125,18 @@ export default {
       currentFilter: 'all',
       filters: [
         { value: 'all', label: 'Все' },
-        { value: 'my', label: 'Мои события' },
-        { value: 'visited', label: 'Посещенные' }
+        { value: 'my', label: 'Мои события' }
       ],
-      upcomingEvents: [
-        {
-          id: 1,
-          title: 'IT-Митап 2024',
-          type: 'Митап',
-          date: '2024-03-15T19:00',
-          location: 'Москва, Крокус Сити',
-          image: null,
-          isMine: true,
-          isVisited: false
-        },
-        {
-          id: 2,
-          title: 'Конференция по Vue.js',
-          type: 'Конференция',
-          date: '2024-03-20T10:00',
-          location: 'Санкт-Петербург, Экспофорум',
-          image: null,
-          isMine: false,
-          isVisited: true
-        },
-        {
-          id: 3,
-          title: 'Frontend Meetup',
-          type: 'Митап',
-          date: '2024-04-01T18:30',
-          location: 'Новосибирск, Экспоцентр',
-          image: null,
-          isMine: true,
-          isVisited: true
-        },
-        {
-          id: 4,
-          title: 'Mobile Dev Conference',
-          type: 'Конференция',
-          date: '2024-04-05T09:00',
-          location: 'Казань, IT-Парк',
-          image: null,
-          isMine: false,
-          isVisited: false
-        },
-        {
-          id: 5,
-          title: 'DevOps Workshop',
-          type: 'Воркшоп',
-          date: '2024-04-10T14:00',
-          location: 'Екатеринбург, Сколково',
-          image: null,
-          isMine: true,
-          isVisited: false
-        }
-      ]
-    }
+      upcomingEvents: eventsData,
+      searchResults: [],
+      allEvents: eventsData
+    };
+  },
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside);
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside);
   },
   computed: {
     isAdminRoot() {
@@ -173,7 +145,6 @@ export default {
     filteredEvents() {
       return this.upcomingEvents.filter(event => {
         if (this.currentFilter === 'my') return event.isMine;
-        if (this.currentFilter === 'visited') return event.isVisited;
         return true;
       });
     },
@@ -202,20 +173,87 @@ export default {
         .replace(' г.', '')
         .replace(',', '');
     },
+    formatEventDate(dateString) {
+      return this.formatDate(dateString);
+    },
     setFilter(filter) {
       this.currentFilter = filter;
       this.currentPage = 1;
     },
     loadMore() {
-      if (this.currentPage < this.totalPages) {
-        this.currentPage++;
+      if (this.currentPage < this.totalPages) this.currentPage++;
+    },
+    handleSearch() {
+      const query = this.searchQuery.toLowerCase();
+      this.searchResults = this.allEvents
+        .filter(event => 
+          event.title.toLowerCase().includes(query) ||
+          event.description.toLowerCase().includes(query)
+        )
+        .slice(0, 5);
+    },
+    navigateToEvent(id) {
+      this.$router.push(`/event/${id}`);
+      this.closeDropdown();
+    },
+    closeDropdown() {
+      this.searchResults = [];
+    },
+    handleClickOutside(event) {
+      if (!this.$refs.searchContainer?.contains(event.target)) {
+        this.closeDropdown();
       }
     }
   }
-}
+};
 </script>
 
 <style scoped>
+.search-container {
+  position: relative;
+  flex-grow: 1;
+  margin-right: 2rem;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  margin-top: 8px;
+}
+
+.search-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-item:hover {
+  background: #f8f9fa;
+}
+
+.search-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-title {
+  font-weight: 500;
+}
+
+.event-date {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+}
+
 .admin-panel {
   font-family: Arial, sans-serif;
   min-height: 100vh;
@@ -259,24 +297,11 @@ nav a:hover {
 }
 
 .search-container input {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
   width: 400px;
-}
-
-/* Стили для аватарки */
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid #e0e0e0;
-  transition: transform 0.3s ease;
-}
-
-.user-avatar:hover {
-  transform: scale(1.1);
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 1rem;
 }
 
 .upcoming-events {

@@ -1,5 +1,9 @@
 <template>
-  <div class="event-card" @click="goToEvent">
+  <div 
+    class="event-card" 
+    :class="{ 'past-event': isPast }" 
+    @click="goToEvent"
+  >
     <div class="card-image">
       <img :src="event.image || defaultImage" :alt="event.title">
       <div class="event-badge">{{ eventType }}</div>
@@ -18,7 +22,12 @@
       </div>
       <div class="event-footer">
         <span class="price" v-if="event.price">{{ event.price }} ₽</span>
-        <button class="details-btn">Подробнее</button>
+        <button 
+          class="details-btn"
+          :class="{ 'past-btn': isPast }"
+        >
+          Подробнее
+        </button>
       </div>
     </div>
   </div>
@@ -57,18 +66,70 @@ export default {
         lecture: 'Лекция'
       }
       return types[this.event.type] || this.event.type
+    },
+    isPast() {
+      const eventDate = new Date(this.event.date)
+      const now = new Date()
+      return eventDate < now
     }
   },
   methods: {
     goToEvent() {
-      this.$router.push({ name: 'Event', params: { id: this.event.id } })
+      if (!this.isPast) {
+        this.$router.push({ name: 'Event', params: { id: this.event.id } })
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-/* Все стили остаются без изменений */
+/* Добавляем стили для прошедших событий */
+.event-card.past-event {
+  position: relative;
+  background-color: #f8f9fa;
+  opacity: 0.8;
+}
+
+.event-card.past-event::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 1;
+}
+
+.event-card.past-event .card-content {
+  position: relative;
+  z-index: 2;
+}
+
+.event-card.past-event .event-title {
+  color: #6c757d !important;
+}
+
+.event-card.past-event .details-btn {
+  background-color: #6c757d !important;
+  cursor: not-allowed;
+}
+
+.event-card {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  background: white;
+  cursor: pointer;
+}
+
+.event-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
 .event-card {
   border-radius: 12px;
   overflow: hidden;

@@ -1,18 +1,40 @@
 <template>
   <div class="event-page">
-    <!-- Унифицированная шапка -->
+    <!-- Унифицированная шапка с поиском -->
     <header class="main-header">
       <div class="header-content">
         <router-link to="/" class="logo-link">
           <img src="@/assets/logo.png" alt="Логотип" class="logo">
         </router-link>
 
-        <div class="search-container">
-          <input 
-            type="text" 
-            placeholder="Поиск событий..." 
-            v-model="globalSearchQuery"
+        <div class="search-container" ref="searchContainer">
+          <input
+            type="text"
+            placeholder="Поиск событий..."
+            v-model="searchQuery"
+            @input="handleSearch"
+            @focus="handleSearch"
           >
+          <div 
+            v-if="searchResults.length > 0" 
+            class="search-dropdown"
+            @mouseleave="closeDropdown"
+          >
+            <div
+              v-for="event in searchResults"
+              :key="event.id"
+              class="search-item"
+              @click="navigateToEvent(event.id)"
+              @mousedown.prevent
+            >
+              <div class="search-item-content">
+                <span class="event-title">{{ event.title }}</span>
+                <span class="event-date">
+                  {{ formatEventDate(event.date) }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="auth-controls">
@@ -29,7 +51,7 @@
     </header>
 
     <!-- Контент события -->
-   <div 
+    <div 
       class="event-header"
       :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${event.image || basedImage})` }"
     >
@@ -49,17 +71,22 @@
         <button 
           class="register-button"
           @click="handleRegistration"
+          :disabled="isPast"
+          :class="{ 'past-event': isPast }"
         >
-          {{ isRegistered ? 'Отменить запись' : 'Записаться' }}
+          {{ isPast ? 'Событие завершено' : (isRegistered ? 'Отменить запись' : 'Записаться') }}
         </button>
       </div>
 
       <div class="map-section">
         <h2>Местоположение</h2>
-        <p class="address-text">{{ event.address }}</p>
-        <div class="map-container">
-          <img :src="staticMapUrl" alt="Карта" class="static-map">
-        </div>
+        <a 
+          class="address-text" 
+          :href="yandexMapsLink" 
+          target="_blank"
+        >
+          {{ event.address }}
+        </a>
       </div>
     </div>
   </div>
@@ -77,12 +104,14 @@ export default {
     return {
       basedImage,
       isRegistered: false,
-      globalSearchQuery: ''
+      searchQuery: '',
+      searchResults: [],
+      allEvents: eventsData
     }
   },
   computed: {
     event() {
-      return eventsData.find(e => e.id === parseInt(this.id)) || {}
+      return this.allEvents.find(e => e.id === parseInt(this.id)) || {}
     },
     formattedDate() {
       if (!this.event.date) return ''
@@ -106,21 +135,132 @@ export default {
       }
       return types[this.event.type?.toLowerCase()] || this.event.type
     },
-    staticMapUrl() {
-      return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(this.event.address)}&zoom=15&size=800x400&markers=color:red%7C${encodeURIComponent(this.event.address)}`
+    isPast() {
+      const eventDate = new Date(this.event.date)
+      const now = new Date()
+      return eventDate < now
+    },
+    yandexMapsLink() {
+      return `https://yandex.ru/maps/?text=${encodeURIComponent(this.event.address)}`
     }
   },
   methods: {
     handleRegistration() {
-      this.isRegistered = !this.isRegistered
-      // Логика записи/отмены
+      if (!this.isPast) {
+        this.isRegistered = !this.isRegistered
+      }
+    },
+    handleSearch() {
+      const query = this.searchQuery.toLowerCase()
+      this.searchResults = this.allEvents
+        .filter(event => 
+          event.title.toLowerCase().includes(query) ||
+          event.description.toLowerCase().includes(query))
+        .slice(0, 5)
+    },
+    navigateToEvent(id) {
+      this.$router.push(`/event/${id}`)
+      this.closeDropdown()
+    },
+    closeDropdown() {
+      this.searchResults = []
+    },
+    formatEventDate(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      const options = {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }
+      return date.toLocaleDateString('ru-RU', options)
+        .replace(' г.', '')
+        .replace(',', '')
+    },
+    handleClickOutside(event) {
+      if (this.$refs.searchContainer && !this.$refs.searchContainer.contains(event.target)) {
+        this.closeDropdown()
+      }
     }
+  },
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside)
   }
 }
 </script>
 
 <style scoped>
-/* Стили шапки из GuestPanel */
+/* Стили поиска из GuestPanel */
+.search-container {
+  position: relative;
+  flex-grow: 1;
+  margin: 0 2rem;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  margin-top: 8px;
+}
+
+.search-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-item:hover {
+  background: #f8f9fa;
+}
+
+.search-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-title {
+  font-weight: 500;
+}
+
+.event-date {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+}
+
+.register-button.past-event {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.address-text {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.address-text:hover {
+  color: #0056b3;
+}
+
+.map-container {
+  display: none;
+}
+
 .main-header {
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

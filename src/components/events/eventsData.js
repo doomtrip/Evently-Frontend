@@ -1,9 +1,10 @@
+// src/components/events/eventsData.js
 export const eventsData = [
   {
     id: 1,
-    title: 'IT-Митап 2024',
+    title: 'IT-Митап 2023',
     type: 'Митап',
-    date: '2024-03-15T19:00',
+    date: '2026-03-15T19:00',
     address: 'Москва, Крокус Сити',
     image: null,
     description: 'Ежемесячная встреча IT-специалистов для обмена опытом',
@@ -14,7 +15,7 @@ export const eventsData = [
     id: 2,
     title: 'Конференция по Vue.js',
     type: 'Конференция',
-    date: '2024-03-20T10:00',
+    date: '2026-04-20T10:00',
     address: 'Санкт-Петербург, Экспофорум',
     image: null,
     description: 'Крупнейшая конференция по Vue.js в России',
@@ -25,7 +26,7 @@ export const eventsData = [
     id: 3,
     title: 'Frontend Meetup',
     type: 'Митап',
-    date: '2024-04-01T18:30',
+    date: '2026-05-01T18:30',
     address: 'Новосибирск, Экспоцентр',
     image: null,
     description: 'Встреча фронтенд-разработчиков',
@@ -36,7 +37,7 @@ export const eventsData = [
     id: 4,
     title: 'Mobile Dev Conference',
     type: 'Конференция',
-    date: '2024-04-05T09:00',
+    date: '2026-06-05T09:00',
     address: 'Казань, IT-Парк',
     image: null,
     description: 'Конференция по мобильной разработке',
@@ -45,37 +46,46 @@ export const eventsData = [
   },
   {
     id: 5,
-    title: 'Конференция по Vue.js',
+    title: 'JavaScript Summit',
     type: 'Конференция',
-    date: '2024-03-20T10:00',
-    address: 'Санкт-Петербург, Экспофорум',
+    date: '2023-07-12T11:00',
+    address: 'Екатеринбург, ДИВС',
     image: null,
-    description: 'Крупнейшая конференция по Vue.js в России',
+    description: 'Ежегодный саммит JavaScript разработчиков',
     isMine: false,
     isVisited: true
   },
   {
     id: 6,
-    title: 'Frontend Meetup',
-    type: 'Митап',
-    date: '2024-04-01T18:30',
-    address: 'Новосибирск, Экспоцентр',
+    title: 'DevOps Workshop',
+    type: 'Воркшоп',
+    date: '2023-08-18T14:00',
+    address: 'Краснодар, Кубань Экспо',
     image: null,
-    description: 'Встреча фронтенд-разработчиков',
+    description: 'Практический воркшоп по DevOps',
     isMine: true,
-    isVisited: true
+    isVisited: false
   },
   {
     id: 7,
-    title: 'Mobile Dev Conference',
-    type: 'Конференция',
-    date: '2024-04-05T09:00',
-    address: 'Казань, IT-Парк',
+    title: 'UX/UI Design Day',
+    type: 'Семинар',
+    date: '2023-09-22T12:00',
+    address: 'Владивосток, FESCO Hall',
     image: null,
-    description: 'Конференция по мобильной разработке',
+    description: 'Семинар по современному дизайну интерфейсов',
     isMine: false,
     isVisited: false
   },
-
-
+  {
+    id: 8,
+    title: 'Backend Masters',
+    type: 'Митап',
+    date: '2023-10-30T17:00',
+    address: 'Сочи, Сириус Парк',
+    image: null,
+    description: 'Встреча backend-разработчиков',
+    isMine: true,
+    isVisited: true
+  }
 ]

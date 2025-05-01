@@ -29,26 +29,36 @@ const userAvatar = computed(() => {
   return store.state.user?.avatar || defaultAvatar
 })
 
-const menuItems = ref([
-  {
-    label: 'Настройки профиля',
-    icon: 'pi pi-cog',
-    command: () => router.push({ name: 'ProfileSettings' })
-  },
-  {
-    label: 'Выход',
-    icon: 'pi pi-sign-out',
-    command: () => {
-      store.dispatch('logout')
-      router.push('/')
+const menuItems = computed(() => {
+  const items = [
+    {
+      label: 'Настройки профиля',
+      icon: 'pi pi-cog',
+      command: () => {
+        if (store.state.user?.role === 'admin') {
+          router.push({ name: 'AdminProfile' })
+        } else {
+          router.push({ name: 'UserProfile' }) // Исправлено имя маршрута
+        }
+      }
+    },
+    {
+      label: 'Выход',
+      icon: 'pi pi-sign-out',
+      command: () => {
+        store.dispatch('logout')
+        router.push('/')
+      }
     }
-  }
-])
+  ]
+  return items
+})
 
 const toggleMenu = (event) => {
   menu.value.toggle(event)
 }
 </script>
+
 <style scoped>
 .user-menu {
   position: relative;

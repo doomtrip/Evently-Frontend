@@ -1,115 +1,188 @@
 <template>
   <div class="events-list">
-    <div class="filters">
-      <button 
-        v-for="filter in filters" 
-        :key="filter"
-        :class="{ active: currentFilter === filter }"
-        @click="currentFilter = filter"
-      >
-        {{ filter }}
-      </button>
+    <div class="header-section">
+      <h2>Управление событиями</h2>
+      <div class="filters">
+        <button
+          v-for="filter in filters"
+          :key="filter.value"
+          :class="{ 'active-filter': currentFilter === filter.value }"
+          @click="setFilter(filter.value)"
+        >
+          {{ filter.label }}
+        </button>
+      </div>
     </div>
 
-    <div class="events-table">
-      <table>
+    <div class="events-table-container">
+      <table class="events-table">
         <thead>
           <tr>
             <th>Название</th>
-            <th>Дата и время</th>
+            <th>Дата проведения</th>
             <th>Место</th>
             <th>Тип</th>
             <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="event in filteredEvents" :key="event.id">
+          <tr 
+            v-for="event in filteredEvents" 
+            :key="event.id"
+            class="event-row"
+          >
             <td>{{ event.title }}</td>
-            <td>{{ formatDateTime(event.date) }}</td>
-            <td>{{ event.location }}</td>
-            <td>{{ event.type }}</td>
+            <td>{{ formatEventDate(event.date) }}</td>
+            <td>{{ event.address }}</td>
             <td>
-              <button @click="editEvent(event)">Редактировать</button>
-              <button @click="deleteEvent(event.id)">Удалить</button>
+              <span class="event-type-badge">
+                {{ eventTypeLabel(event.type) }}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button 
+                  @click="editEvent(event)"
+                  class="edit-btn"
+                >
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button 
+                  @click="deleteEvent(event.id)"
+                  class="delete-btn"
+                >
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-
-    <div class="pagination" v-if="totalPages > 1">
-      <button 
-        v-for="page in totalPages" 
-        :key="page"
-        @click="currentPage = page"
-        :class="{ active: currentPage === page }"
-      >
-        {{ page }}
-      </button>
-    </div>
   </div>
 </template>
 
 <script>
+import { eventsData } from '@/components/events/eventsData'
+
 export default {
   data() {
     return {
-      currentFilter: 'Все',
-      filters: ['Все', 'Мои события', 'Посещенные'],
-      events: [], // Данные с API
-      currentPage: 1,
-      itemsPerPage: 10
+      events: eventsData,
+      currentFilter: 'all',
+      filters: [
+        { value: 'all', label: 'Все события' },
+        { value: 'my', label: 'Мои события' }
+      ]
     }
   },
   computed: {
     filteredEvents() {
-      // Фильтрация и пагинация
-      return this.events
-        .filter(event => this.applyFilter(event))
-        .slice((this.currentPage - 1) * this.itemsPerPage, this.currentPage * this.itemsPerPage)
-    },
-    totalPages() {
-      return Math.ceil(this.events.length / this.itemsPerPage)
+      return this.currentFilter === 'my' 
+        ? this.events.filter(e => e.isMine)
+        : this.events
     }
   },
   methods: {
-    formatDateTime(date) {
-      return new Date(date).toLocaleString()
+    formatEventDate(dateString) {
+      const options = { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }
+      return new Date(dateString).toLocaleDateString('ru-RU', options)
     },
-    applyFilter(event) {
-      // Логика фильтрации
+    eventTypeLabel(type) {
+      const labels = {
+        meetup: 'Митап',
+        conference: 'Конференция',
+        workshop: 'Воркшоп'
+      }
+      return labels[type.toLowerCase()] || type
+    },
+    setFilter(filter) {
+      this.currentFilter = filter
     },
     editEvent(event) {
-      // Переход к редактированию
+      this.$router.push({
+        name: 'CreateEvent',
+        params: { id: event.id },
+        state: { eventData: event }
+      })
     },
     deleteEvent(id) {
-      // Удаление события
+      this.events = this.events.filter(event => event.id !== id)
+      eventsData = this.events
     }
   }
 }
 </script>
 
 <style scoped>
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
 .filters button {
-  margin-right: 1rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
+  padding: 0.5rem 1.5rem;
+  margin-left: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  background: none;
+  cursor: pointer;
 }
 
-.filters button.active {
-  background: #007bff;
-  color: white;
+.active-filter {
+  background: #007bff !important;
+  color: white !important;
+  border-color: #007bff !important;
 }
 
-.events-table table {
+.events-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.events-table th, 
+.events-table th,
 .events-table td {
   padding: 1rem;
-  border: 1px solid #ddd;
+  border: 1px solid #dee2e6;
   text-align: left;
+}
+
+.event-type-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  background: #e9ecef;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  background: #17a2b8;
+  color: white;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+}
+
+.pi {
+  font-size: 1rem;
 }
 </style>

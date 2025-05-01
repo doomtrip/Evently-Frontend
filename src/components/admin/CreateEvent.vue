@@ -1,8 +1,7 @@
 <template>
   <div class="create-event">
-    <h1>Создание нового события</h1>
+    <h1>{{ isEditMode ? 'Редактирование события' : 'Создание нового события' }}</h1>
     <div class="form-layout">
-      <!-- Левая часть - форма -->
       <div class="form-section">
         <form @submit.prevent="submitEvent">
           <div class="form-group">
@@ -17,7 +16,13 @@
               v-model="event.type"
               placeholder="Введите тип события"
               required
+              list="eventTypes"
             >
+            <datalist id="eventTypes">
+              <option>Митап</option>
+              <option>Конференция</option>
+              <option>Воркшоп</option>
+            </datalist>
           </div>
 
           <div class="form-group">
@@ -57,11 +62,12 @@
             </div>
           </div>
 
-          <button type="submit" class="submit-btn">Создать событие</button>
+          <button type="submit" class="submit-btn">
+            {{ isEditMode ? 'Сохранить изменения' : 'Создать событие' }}
+          </button>
         </form>
       </div>
 
-      <!-- Правая часть - превью -->
       <div class="preview-section">
         <div class="preview-card">
           <div class="preview-image">
@@ -94,9 +100,11 @@
 </template>
 
 <script>
-import basedImage from '@/assets/based_image.jpg';
+import { eventsData } from '@/components/events/eventsData'
+import basedImage from '@/assets/based_image.jpg'
 
 export default {
+  props: ['id'],
   data() {
     return {
       basedImage: basedImage,
@@ -107,35 +115,54 @@ export default {
         address: '',
         description: '',
         image: null
-      }
+      },
+      originalEvent: null
     }
   },
   computed: {
+    isEditMode() {
+      return !!this.$route.params.id
+    },
     formattedDate() {
-      if (!this.event.date) return 'Дата не указана';
-      
-      const date = new Date(this.event.date);
+      if (!this.event.date) return 'Дата не указана'
+      const date = new Date(this.event.date)
       const options = {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
-      };
-      
+      }
       return date.toLocaleDateString('ru-RU', options)
         .replace(' г.', '')
-        .replace(',', '');
+        .replace(',', '')
     },
     eventTypeLabel() {
-      // Возвращает введенное значение или стандартные варианты
-      return {
-        meetup: 'Митап',
-        conference: 'Конференция'
-      }[this.event.type.toLowerCase()] || this.event.type;
+      return this.event.type || 'Тип не указан'
+    }
+  },
+  created() {
+    if (this.isEditMode) {
+      this.loadEventData()
     }
   },
   methods: {
+    loadEventData() {
+      const eventId = parseInt(this.$route.params.id)
+      this.originalEvent = eventsData.find(e => e.id === eventId)
+      if (this.originalEvent) {
+        this.event = {
+          ...this.originalEvent,
+          date: this.formatDateForInput(this.originalEvent.date)
+        }
+      }
+    },
+    formatDateForInput(dateString) {
+      const date = new Date(dateString)
+      return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+        .toISOString()
+        .slice(0, 16)
+    },
     handleImageUpload(e) {
       const file = e.target.files[0]
       if (file) {
@@ -146,14 +173,32 @@ export default {
       this.event.image = null
     },
     submitEvent() {
-      console.log('Событие создано:', this.event)
+      if (this.isEditMode) {
+        const index = eventsData.findIndex(e => e.id === this.originalEvent.id)
+        if (index !== -1) {
+          eventsData[index] = {
+            ...this.event,
+            id: this.originalEvent.id,
+            date: new Date(this.event.date).toISOString(),
+            isMine: true
+          }
+        }
+      } else {
+        const newEvent = {
+          ...this.event,
+          id: Date.now(),
+          date: new Date(this.event.date).toISOString(),
+          isMine: true
+        }
+        eventsData.unshift(newEvent)
+      }
+      this.$router.push('/admin/events')
     }
   }
 }
 </script>
 
 <style scoped>
-/* Все стили остаются без изменений из предыдущей версии */
 .create-event {
   max-width: 1200px;
   margin: 0 auto;
@@ -191,7 +236,8 @@ label {
 }
 
 input,
-textarea {
+textarea,
+datalist {
   width: 100%;
   padding: 0.8rem;
   border: 2px solid #e0e0e0;

@@ -1,40 +1,65 @@
 <template>
   <div class="permissions-manager">
-    <div class="controls">
-      <input 
-        type="text" 
-        placeholder="Поиск пользователя" 
-        v-model="searchQuery"
-      >
+    <div class="manager-header">
+      <h2>Управление правами доступа</h2>
+      <div class="search-control">
+        <input 
+          type="text" 
+          placeholder="Поиск по имени или email..." 
+          v-model="searchQuery"
+        >
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Пользователь</th>
-          <th>Роль</th>
-          <th>Действия</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="user in filteredUsers" :key="user.id">
-          <td>{{ user.name }} ({{ user.email }})</td>
-          <td>
-            <select v-model="user.role">
-              <option value="user">Пользователь</option>
-              <option value="moderator">Модератор</option>
-              <option value="admin">Администратор</option>
-            </select>
-          </td>
-          <td>
-            <button @click="saveChanges(user)">Сохранить</button>
-            <button @click="resetRole(user)">Сбросить</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="permissions-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Текущая роль</th>
+            <th>Новая роль</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr 
+            v-for="user in filteredUsers" 
+            :key="user.id"
+            class="user-row"
+          >
+            <td>{{ user.name }} ({{ user.email }})</td>
+            <td>
+              <span class="current-role">
+                {{ formatRole(user.role) }}
+              </span>
+            </td>
+            <td>
+              <select 
+                v-model="user.newRole" 
+                class="role-selector"
+              >
+                <option value="user">Пользователь</option>
+                <option value="moderator">Модератор</option>
+                <option value="admin">Администратор</option>
+              </select>
+            </td>
+            <td>
+              <button 
+                @click="savePermissions(user)"
+                class="save-btn"
+              >
+                Сохранить
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-    <div class="notification" v-if="showNotification">
+    <div 
+      v-if="showNotification" 
+      class="notification"
+    >
       Изменения успешно сохранены!
     </div>
   </div>
@@ -44,9 +69,24 @@
 export default {
   data() {
     return {
-      users: [], // Данные с API
       searchQuery: '',
-      showNotification: false
+      showNotification: false,
+      users: [
+        {
+          id: 1,
+          name: 'Admin User',
+          email: 'admin@example.com',
+          role: 'admin',
+          newRole: 'admin'
+        },
+        {
+          id: 2,
+          name: 'Test User',
+          email: 'user@example.com',
+          role: 'user',
+          newRole: 'user'
+        }
+      ]
     }
   },
   computed: {
@@ -58,49 +98,86 @@ export default {
     }
   },
   methods: {
-    saveChanges(user) {
-      // API запрос на обновление роли
+    formatRole(role) {
+      const roles = {
+        admin: 'Администратор',
+        moderator: 'Модератор',
+        user: 'Пользователь'
+      }
+      return roles[role]
+    },
+    savePermissions(user) {
+      user.role = user.newRole
       this.showNotification = true
       setTimeout(() => this.showNotification = false, 2000)
-    },
-    resetRole(user) {
-      user.role = 'user'
     }
   }
 }
 </script>
 
 <style scoped>
-.permissions-manager {
-  max-width: 800px;
-  margin: 0 auto;
+.manager-header {
+  margin-bottom: 2rem;
+}
+
+.search-control input {
+  width: 300px;
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.permissions-table {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
 }
 
 th, td {
   padding: 1rem;
-  border: 1px solid #ddd;
+  border-bottom: 1px solid #dee2e6;
   text-align: left;
 }
 
-select {
+.current-role {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  background: #e9ecef;
+}
+
+.role-selector {
   padding: 0.5rem;
+  border: 1px solid #007bff;
   border-radius: 4px;
-  border: 1px solid #ddd;
+}
+
+.save-btn {
+  background: #28a745;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .notification {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  padding: 1rem;
-  background: #4CAF50;
+  padding: 1rem 2rem;
+  background: #28a745;
   color: white;
-  border-radius: 4px;
+  border-radius: 8px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 </style>

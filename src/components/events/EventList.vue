@@ -4,10 +4,11 @@
       <h2>{{ title }}</h2>
       <div class="filters" v-if="showFilters">
         <button
-          v-for="filter in filters"
+          v-for="filter in availableFilters"
           :key="filter.value"
           :class="{ active: currentFilter === filter.value }"
           @click="setFilter(filter.value)"
+          :data-filter="filter.value"
         >
           {{ filter.label }}
         </button>
@@ -23,15 +24,26 @@
       />
     </div>
 
-    <div class="load-more" v-if="showLoadMore && hasMore">
+    <div 
+      class="load-more" 
+      v-if="showLoadMore && hasMore"
+    >
       <button @click="loadMore">
         Показать еще
       </button>
+    </div>
+    
+    <div 
+      v-if="filteredEvents.length === 0"
+      class="no-events"
+    >
+      <p>Событий не найдено</p>
     </div>
   </div>
 </template>
 
 <script>
+import { mapState } from 'vuex'
 import EventCard from './EventCard.vue'
 import { eventsData } from './eventsData'
 
@@ -55,22 +67,35 @@ export default {
     return {
       events: eventsData,
       currentPage: 1,
-      currentFilter: 'all',
-      filters: [
-        { value: 'all', label: 'Все' },
-        { value: 'my', label: 'Мои события' },
-        { value: 'visited', label: 'Посещенные' }
-      ]
+      currentFilter: 'all'
     }
   },
   computed: {
+    ...mapState(['user']),
+    availableFilters() {
+      const baseFilters = [
+        { value: 'all', label: 'Все' },
+        { value: 'past', label: 'Прошедшие' }
+      ]
+      if (this.user) {
+        baseFilters.splice(1, 0, { 
+          value: 'my', 
+          label: 'Мои события' 
+        })
+      }
+      return baseFilters
+    },
     filteredEvents() {
+      const now = new Date()
       let events = [...this.events]
       
-      if (this.currentFilter === 'my') {
-        events = events.filter(e => e.isMine)
-      } else if (this.currentFilter === 'visited') {
-        events = events.filter(e => e.isVisited)
+      switch(this.currentFilter) {
+        case 'my':
+          events = events.filter(e => e.isMine)
+          break
+        case 'past':
+          events = events.filter(e => new Date(e.date) < now)
+          break
       }
       
       return events.slice(0, this.currentPage * this.perPage)
@@ -86,6 +111,7 @@ export default {
     setFilter(filter) {
       this.currentFilter = filter
       this.currentPage = 1
+      this.$emit('filter-change', filter)
     },
     loadMore() {
       this.currentPage++
@@ -98,6 +124,13 @@ export default {
 </script>
 
 <style scoped>
+.no-events {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  font-size: 1.2rem;
+}
+
 .events-container {
   max-width: 1200px;
   margin: 0 auto;
