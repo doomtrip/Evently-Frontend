@@ -1,7 +1,7 @@
 <template>
   <div class="events-container">
     <div class="events-header">
-      <h2>{{ title }}</h2>
+     <h2 v-if="title">{{ title }}</h2>
       <div class="filters" v-if="showFilters">
         <button
           v-for="filter in availableFilters"
@@ -45,7 +45,6 @@
 <script>
 import { mapState } from 'vuex'
 import EventCard from './EventCard.vue'
-import { eventsData } from './eventsData'
 
 export default {
   components: { EventCard },
@@ -61,11 +60,14 @@ export default {
     perPage: {
       type: Number,
       default: 4
+    },
+    events: {
+      type: Array,
+      required: true
     }
   },
   data() {
     return {
-      events: eventsData,
       currentPage: 1,
       currentFilter: 'all'
     }

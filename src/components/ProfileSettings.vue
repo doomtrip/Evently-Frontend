@@ -135,8 +135,12 @@
     </div>
 
     <div class="my-events-section">
-      <h2>Мои события</h2>
-      <EventList :events="userEvents" />
+      <EventList 
+        :events="userEvents"
+        :show-filters="false"
+        :per-page="8"
+        title="Мои события" 
+      />
     </div>
   </div>
 </template>
@@ -162,7 +166,6 @@ export default {
         newEmail: this.$store.state.user?.email || '',
         avatar: null
       },
-      userEvents: eventsData.filter(e => e.isMine),
       allEvents: eventsData
     }
   },
@@ -172,6 +175,9 @@ export default {
     },
     isAdmin() {
       return this.$store.state.user?.role === 'admin'
+    },
+    userEvents() {
+      return this.allEvents.filter(event => event.isMine)
     }
   },
   methods: {
@@ -270,7 +276,7 @@ export default {
   position: sticky;
   top: 0;
   z-index: 1000;
-	display: none;
+  display: none;
 }
 
 .header-content {
