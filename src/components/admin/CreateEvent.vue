@@ -18,11 +18,6 @@
               required
               list="eventTypes"
             >
-            <datalist id="eventTypes">
-              <option>Митап</option>
-              <option>Конференция</option>
-              <option>Воркшоп</option>
-            </datalist>
           </div>
 
           <div class="form-group">

@@ -89,18 +89,32 @@ export default {
     },
     filteredEvents() {
       const now = new Date()
-      let events = [...this.events]
       
+      // Создаем копию событий и сортируем их
+      let events = [...this.events]
+        .map(e => ({ ...e, dateObj: new Date(e.date) })) // Добавляем объект даты
+        .sort((a, b) => a.dateObj - b.dateObj) // Сортировка по возрастанию даты
+
+      // Разделяем на предстоящие и завершенные
+      const upcoming = events.filter(e => e.dateObj >= now)
+      const past = events.filter(e => e.dateObj < now).reverse() // Реверсируем завершенные
+
+      // Объединяем в правильном порядке
+      const orderedEvents = [...upcoming, ...past]
+
+      // Применяем фильтры
+      let filtered = orderedEvents
       switch(this.currentFilter) {
         case 'my':
-          events = events.filter(e => e.isMine)
+          filtered = filtered.filter(e => e.isMine)
           break
         case 'past':
-          events = events.filter(e => new Date(e.date) < now)
+          filtered = filtered.filter(e => e.dateObj < now)
           break
       }
-      
-      return events.slice(0, this.currentPage * this.perPage)
+
+      // Пагинация
+      return filtered.slice(0, this.currentPage * this.perPage)
     },
     hasMore() {
       return this.filteredEvents.length < this.events.length

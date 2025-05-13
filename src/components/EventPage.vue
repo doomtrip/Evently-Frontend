@@ -25,7 +25,7 @@
               :key="event.id"
               class="search-item"
               @click="navigateToEvent(event.id)"
-              @mousedown.prevent
+              @mousedown.prevent"
             >
               <div class="search-item-content">
                 <span class="event-title">{{ event.title }}</span>
@@ -74,7 +74,7 @@
           :disabled="isPast"
           :class="{ 'past-event': isPast }"
         >
-          {{ isPast ? 'Событие завершено' : (isRegistered ? 'Отменить запись' : 'Записаться') }}
+          {{ isPast ? 'Событие завершено' : (event.isMine ? 'Отменить запись' : 'Записаться') }}
         </button>
       </div>
 
@@ -103,10 +103,9 @@ export default {
   data() {
     return {
       basedImage,
-      isRegistered: false,
       searchQuery: '',
       searchResults: [],
-      allEvents: eventsData
+      allEvents: JSON.parse(localStorage.getItem('events')) || eventsData
     }
   },
   computed: {
@@ -131,7 +130,6 @@ export default {
       const types = {
         meetup: 'Митап',
         conference: 'Конференция',
-        workshop: 'Воркшоп'
       }
       return types[this.event.type?.toLowerCase()] || this.event.type
     },
@@ -147,7 +145,12 @@ export default {
   methods: {
     handleRegistration() {
       if (!this.isPast) {
-        this.isRegistered = !this.isRegistered
+        const eventIndex = this.allEvents.findIndex(e => e.id === parseInt(this.id))
+        if (eventIndex > -1) {
+          this.allEvents[eventIndex].isMine = !this.allEvents[eventIndex].isMine
+          localStorage.setItem('events', JSON.stringify(this.allEvents))
+          this.allEvents = [...this.allEvents]
+        }
       }
     },
     handleSearch() {
@@ -186,6 +189,10 @@ export default {
     }
   },
   mounted() {
+    const savedEvents = JSON.parse(localStorage.getItem('events'))
+    if (savedEvents) {
+      this.allEvents = savedEvents
+    }
     document.addEventListener('click', this.handleClickOutside)
   },
   beforeDestroy() {
@@ -195,7 +202,7 @@ export default {
 </script>
 
 <style scoped>
-/* Стили поиска из GuestPanel */
+/* Все стили остаются без изменений */
 .search-container {
   position: relative;
   flex-grow: 1;
@@ -309,7 +316,6 @@ export default {
   background: #0056b3;
 }
 
-/* Стили специфичные для страницы события */
 .event-header {
   height: 60vh;
   background-size: cover;
@@ -318,7 +324,7 @@ export default {
   align-items: flex-end;
   padding: 2rem;
   color: white;
-  margin-top: -1px; /* Убирает зазор между шапками */
+  margin-top: -1px;
 }
 
 .event-type {
@@ -389,7 +395,6 @@ export default {
   margin: 0;
 }
 
-/* Стили для адреса */
 .address-text {
   font-size: 1.2rem;
   color: #666;
@@ -399,7 +404,6 @@ export default {
   border-radius: 8px;
 }
 
-/* Адаптивность */
 @media (max-width: 768px) {
   .event-info h1 {
     font-size: 2rem;

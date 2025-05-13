@@ -6,15 +6,17 @@
         <h1 class="title">Evently</h1>
       </div>
 
-      <h2 class="form-title">{{ isRegistering ? 'Регистрация' : 'Авторизация' }}</h2>
+      <h2 class="form-title">
+        {{ isRecovering ? 'Восстановление пароля' 
+          : isRegistering ? 'Регистрация' 
+          : 'Авторизация' }}
+      </h2>
 
       <div v-if="errorMessage" class="global-error">
         {{ errorMessage }}
       </div>
 
-
-
-      <form @submit.prevent="handleSubmit" class="auth-form">
+      <form @submit.prevent="handleSubmit" class="auth-form" v-if="!isRecovering">
         <div class="form-group">
           <InputText
             v-if="isRegistering"
@@ -39,6 +41,14 @@
             :class="{ 'input-error': passwordTouched && invalidPassword }"
             @blur="passwordTouched = true"
           />
+
+          <button 
+            v-if="!isRegistering && !isRecovering"
+            class="forgot-password" 
+            @click="isRecovering = true"
+          >
+            Забыли пароль?
+          </button>
 
           <div v-if="isRegistering" class="form-group">
             <InputText
@@ -101,10 +111,101 @@
           </div>
         </div>
       </form>
+
+      <form @submit.prevent="handlePasswordRecovery" class="auth-form" v-else>
+        <div class="form-group">
+          <template v-if="!codeSent && !codeVerified">
+            <InputText
+              v-model="recoverEmail"
+              placeholder="Введите вашу почту"
+              type="email"
+              class="custom-input"
+              :class="{ 'input-error': emailRecoverTouched && invalidRecoverEmail }"
+              @blur="emailRecoverTouched = true"
+            />
+            <small class="email-example">Пример: user@example.com</small>
+            <Button 
+              type="submit" 
+              class="submit-btn"
+              :disabled="invalidRecoverEmail || isLoading"
+            >
+              Отправить код
+            </Button>
+          </template>
+
+          <template v-if="codeSent && !codeVerified">
+            <InputText
+              v-model="recoveryCode"
+              placeholder="Введите код из письма"
+              class="custom-input"
+              :class="{ 'input-error': codeTouched && invalidCode }"
+              @blur="codeTouched = true"
+            />
+            <Button 
+              type="submit" 
+              class="submit-btn"
+              :disabled="isLoading"
+              @click="verifyCode"
+            >
+              Подтвердить код
+            </Button>
+          </template>
+
+          <template v-if="codeVerified">
+            <InputText
+              v-model="newPassword"
+              placeholder="Новый пароль"
+              type="password"
+              class="custom-input"
+              :class="{ 'input-error': newPassTouched && invalidNewPassword }"
+              @blur="newPassTouched = true"
+            />
+            <small 
+              v-if="newPassTouched && invalidNewPassword" 
+              class="error-message"
+            >
+              Пароль должен содержать минимум 8 символов и хотя бы одну цифру или букву
+            </small>
+
+            <InputText
+              v-model="confirmNewPassword"
+              placeholder="Повторите пароль"
+              type="password"
+              class="custom-input"
+              :class="{ 'input-error': confirmNewTouched && passwordMismatchNew }"
+              @blur="confirmNewTouched = true"
+            />
+            <small 
+              v-if="confirmNewTouched && passwordMismatchNew" 
+              class="error-message"
+            >
+              Пароли не совпадают
+            </small>
+
+            <Button 
+              type="submit" 
+              class="submit-btn"
+              :disabled="invalidNewPassword || passwordMismatchNew || isLoading"
+              @click="updatePassword"
+            >
+              Сохранить пароль
+            </Button>
+          </template>
+
+          <div class="auth-actions">
+            <button 
+              class="switch-mode" 
+              @click="isRecovering = false"
+              :disabled="isLoading"
+            >
+              Вернуться к авторизации
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 </template>
-
 
 <script setup>
 import { ref, computed } from 'vue';
@@ -117,29 +218,36 @@ import userImg from '@/assets/user.png';
 const router = useRouter();
 const store = useStore();
 
-// Состояния формы
 const isRegistering = ref(false);
+const isRecovering = ref(false);
 const currentEmail = ref('');
 const currentPassword = ref('');
 const registerEmail = ref('');
 const registerConfirmPassword = ref('');
 
-// Тестовые данные
+const recoverEmail = ref('');
+const recoveryCode = ref('');
+const newPassword = ref('');
+const confirmNewPassword = ref('');
+const codeSent = ref(false);
+const codeVerified = ref(false);
+
 const testCredentials = {
   admin: { login: 'admin', password: 'admin' },
   user: { login: 'user', password: 'user' }
 };
 
-// Трекеры взаимодействия
 const emailTouched = ref(false);
 const passwordTouched = ref(false);
 const confirmTouched = ref(false);
+const emailRecoverTouched = ref(false);
+const codeTouched = ref(false);
+const newPassTouched = ref(false);
+const confirmNewTouched = ref(false);
 
-// Состояния загрузки и ошибок
 const isLoading = ref(false);
 const errorMessage = ref('');
 
-// Валидации
 const invalidPassword = computed(() => {
   const password = currentPassword.value;
   return isRegistering.value && (
@@ -148,23 +256,33 @@ const invalidPassword = computed(() => {
   );
 });
 
-const invalidEmail = computed(() => {
-  return isRegistering.value && 
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerEmail.value);
-});
+const invalidEmail = computed(() => 
+  isRegistering.value && 
+  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerEmail.value)
+);
 
 const passwordMismatch = computed(() => 
   isRegistering.value && 
   currentPassword.value !== registerConfirmPassword.value
 );
 
-// Заполнение тестовых данных
-const fillTestCredentials = (type) => {
-  currentEmail.value = testCredentials[type].login;
-  currentPassword.value = testCredentials[type].password;
-};
+const invalidRecoverEmail = computed(() => 
+  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recoverEmail.value)
+);
 
-// Обработчик формы
+const invalidCode = computed(() => 
+  recoveryCode.value !== '0000'
+);
+
+const invalidNewPassword = computed(() => 
+  newPassword.value.length < 8 || 
+  !/[A-Za-z0-9]/.test(newPassword.value)
+);
+
+const passwordMismatchNew = computed(() => 
+  newPassword.value !== confirmNewPassword.value
+);
+
 const handleSubmit = async () => {
   if (isRegistering.value && (invalidPassword.value || passwordMismatch.value || invalidEmail.value)) return;
   
@@ -173,7 +291,6 @@ const handleSubmit = async () => {
     errorMessage.value = '';
 
     if (isRegistering.value) {
-      // Логика регистрации
       const newUser = {
         login: currentEmail.value,
         email: registerEmail.value,
@@ -182,17 +299,14 @@ const handleSubmit = async () => {
         avatar: userImg
       };
       
-      // Сохраняем в localStorage
       localStorage.setItem('users', JSON.stringify([
         ...JSON.parse(localStorage.getItem('users') || '[]'),
         newUser
       ]));
       
-      // Автоматическая авторизация
       store.commit('setUser', newUser);
       router.push('/');
     } else {
-      // Логика авторизации
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const user = users.find(u => 
         (u.login === currentEmail.value || u.email === currentEmail.value) &&
@@ -200,7 +314,6 @@ const handleSubmit = async () => {
       );
 
       if (!user) {
-        // Проверка тестовых аккаунтов
         if (currentEmail.value === testCredentials.admin.login && 
             currentPassword.value === testCredentials.admin.password) {
           store.commit('setUser', {
@@ -231,6 +344,58 @@ const handleSubmit = async () => {
     errorMessage.value = error.message;
   } finally {
     isLoading.value = false;
+  }
+};
+
+const handlePasswordRecovery = async () => {
+  try {
+    if (!codeSent.value) {
+      if (recoverEmail.value === 'user@example.com') {
+        codeSent.value = true;
+        errorMessage.value = 'Код 0000 отправлен на вашу почту';
+        return;
+      }
+
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const emailExists = users.some(u => u.email === recoverEmail.value);
+      
+      if (!emailExists) throw new Error('Пользователь с такой почтой не найден');
+      
+      codeSent.value = true;
+      errorMessage.value = 'Код 0000 отправлен на вашу почту';
+    }
+  } catch (error) {
+    errorMessage.value = error.message;
+  }
+};
+
+const verifyCode = () => {
+  if (recoveryCode.value === '0000') {
+    codeVerified.value = true;
+    errorMessage.value = '';
+  } else {
+    errorMessage.value = 'Неверный код подтверждения';
+  }
+};
+
+const updatePassword = () => {
+  try {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex(u => 
+      u.email === recoverEmail.value || u.email === 'user@example.com'
+    );
+    
+    if (userIndex === -1) throw new Error('Ошибка обновления пароля');
+    
+    users[userIndex].password = newPassword.value;
+    localStorage.setItem('users', JSON.stringify(users));
+    errorMessage.value = 'Пароль успешно изменен!';
+    setTimeout(() => {
+      isRecovering.value = false;
+      router.push('/');
+    }, 2000);
+  } catch (error) {
+    errorMessage.value = error.message;
   }
 };
 
@@ -369,33 +534,29 @@ const handleVKAuth = async () => {
   to { transform: rotate(360deg); }
 }
 
-.test-users {
-  margin-bottom: 1.5rem;
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-.test-btn {
-  padding: 0.5rem 1rem;
+.forgot-password {
+  color: #3b82f6;
+  background: none;
   border: none;
-  border-radius: 4px;
   cursor: pointer;
+  padding: 0;
+  margin: -0.5rem 0 1rem;
+  font-size: 0.9rem;
+  width: 100%;
+  text-align: right;
   transition: opacity 0.3s;
 }
 
-.admin-btn {
-  background: #007bff;
-  color: white;
+.forgot-password:hover {
+  opacity: 0.8;
 }
 
-.user-btn {
-  background: #28a745;
-  color: white;
-}
-
-.test-btn:hover {
-  opacity: 0.9;
+.email-example {
+  display: block;
+  color: #64748b;
+  font-size: 0.8rem;
+  margin: -0.5rem 0 1rem;
+  text-align: left;
 }
 
 .return-link {

@@ -11,6 +11,32 @@
       </div>
     </div>
 
+    <!-- Пагинация -->
+    <div class="pagination-controls">
+      <div class="page-size-selector">
+        <span>Показывать по:</span>
+        <select v-model="itemsPerPage">
+          <option v-for="option in pageSizeOptions" :value="option">{{ option }}</option>
+        </select>
+      </div>
+      
+      <div class="page-navigation">
+        <button 
+          @click="currentPage--" 
+          :disabled="currentPage === 1"
+        >
+          Назад
+        </button>
+        <span>Страница {{ currentPage }} из {{ totalPages }}</span>
+        <button 
+          @click="currentPage++" 
+          :disabled="currentPage >= totalPages"
+        >
+          Вперед
+        </button>
+      </div>
+    </div>
+
     <div class="permissions-table">
       <table>
         <thead>
@@ -23,7 +49,7 @@
         </thead>
         <tbody>
           <tr 
-            v-for="user in filteredUsers" 
+            v-for="user in paginatedUsers" 
             :key="user.id"
             class="user-row"
           >
@@ -71,6 +97,9 @@ export default {
     return {
       searchQuery: '',
       showNotification: false,
+      currentPage: 1,
+      itemsPerPage: 15,
+      pageSizeOptions: [15, 30, 75, 150],
       users: [
         {
           id: 1,
@@ -86,6 +115,7 @@ export default {
           role: 'user',
           newRole: 'user'
         }
+        // ... другие пользователи ...
       ]
     }
   },
@@ -95,6 +125,22 @@ export default {
         user.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(this.searchQuery.toLowerCase())
       )
+    },
+    paginatedUsers() {
+      const start = (this.currentPage - 1) * this.itemsPerPage
+      const end = start + this.itemsPerPage
+      return this.filteredUsers.slice(start, end)
+    },
+    totalPages() {
+      return Math.ceil(this.filteredUsers.length / this.itemsPerPage)
+    }
+  },
+  watch: {
+    itemsPerPage() {
+      this.currentPage = 1
+    },
+    searchQuery() {
+      this.currentPage = 1
     }
   },
   methods: {
@@ -125,6 +171,37 @@ export default {
   padding: 0.5rem;
   border: 1px solid #dee2e6;
   border-radius: 4px;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0;
+  padding: 0.5rem 0;
+}
+
+.page-size-selector select {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.page-navigation button {
+  margin: 0 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.page-navigation button:disabled {
+  background: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
 }
 
 .permissions-table {

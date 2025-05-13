@@ -2,10 +2,10 @@
 export const eventsData = [
   {
     id: 1,
-    title: 'IT-Митап 2023',
+    title: 'IT-Митап 2026',
     type: 'Митап',
     date: '2026-03-15T19:00',
-    address: 'Москва, Крокус Сити',
+    address: 'Москва, Экспо',
     image: null,
     description: 'Ежемесячная встреча IT-специалистов для обмена опытом',
     isMine: true,
@@ -85,6 +85,17 @@ export const eventsData = [
     address: 'Сочи, Сириус Парк',
     image: null,
     description: 'Встреча backend-разработчиков',
+    isMine: true,
+    isVisited: true
+  },
+  {
+    id: 0,
+    title: 'Test Sobitie',
+    type: 'Митап',
+    date: '2025-05-30T17:00',
+    address: 'Екатеринбург, УрФУ',
+    image: null,
+    description: 'Встреча прикольных разработчиков',
     isMine: true,
     isVisited: true
   }
