@@ -65,7 +65,6 @@
                 class="role-selector"
               >
                 <option value="user">Пользователь</option>
-                <option value="moderator">Модератор</option>
                 <option value="admin">Администратор</option>
               </select>
             </td>
@@ -147,7 +146,6 @@ export default {
     formatRole(role) {
       const roles = {
         admin: 'Администратор',
-        moderator: 'Модератор',
         user: 'Пользователь'
       }
       return roles[role]
