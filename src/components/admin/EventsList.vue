@@ -68,7 +68,7 @@ import { eventsData } from '@/components/events/eventsData'
 export default {
   data() {
     return {
-      events: eventsData,
+      events: [...eventsData], // Делаем копию, чтобы не мутировать импорт напрямую при инициализации
       currentFilter: 'all',
       filters: [
         { value: 'all', label: 'Все события' },
@@ -114,7 +114,7 @@ export default {
     },
     deleteEvent(id) {
       this.events = this.events.filter(event => event.id !== id)
-      eventsData = this.events
+      // Строка eventsData = this.events УДАЛЕНА, так как импорт нельзя переприсваивать.
     }
   }
 }
